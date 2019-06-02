@@ -19,8 +19,25 @@ npm install hafas-monitor-trips-server
 ## Usage
 
 ```js
-todo
+const createServer = require('hafas-monitor-trips-server')
+
+const server = createServer(hafas)
+const subA = server.subscribe({
+	north: 52.51, south: 52.4, west: 13.35, east: 13.38
+})
+const subB = server.subscribe({
+	north: 52.505, south: 52.45, west: 13.355, east: 13.375
+})
+
+subA.on('stopover', stopover => console.log('A', stopover))
+subB.on('stopover', stopover => console.log('B', stopover))
 ```
+
+- `subA` and `subB` have overlapping bounding boxes, so they will share one monitor.
+- `hafas` is a [`hafas-client`/`*-hafas`](https://npmjs.com/package/hafas-client) instance.
+- `subscribe(bbox)` returns an [`EventEmitter`](https://nodejs.org/docs/latest-v12.x/api/events.html#events_class_eventemitter), emitting the same events as a [`hafas-monitor-trips`](https://npmjs.com/package/hafas-monitor-trips) instance.
+
+See [`example.js`](example.js) for a full example.
 
 
 ## Contributing
