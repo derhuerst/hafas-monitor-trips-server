@@ -5,19 +5,38 @@ const RBush = require('rbush')
 const createMonitor = require('hafas-monitor-trips')
 const debug = require('debug')('hafas-monitor-trips-server')
 
-const EVENTS = [
-	'trip', 'new-trip', 'trip-obsolete',
-	'stopover',
-	'position',
-	'error', 'stats'
-]
-
 const refCount = Symbol('ref count')
-const monitorProxy = (monitor, destroyMonitor) => {
+const monitorProxy = (monitor, bbox, destroyMonitor) => {
+	const isWithinBbox = (loc) => (
+		loc.latitude <= bbox.north &&
+		loc.latitude >= bbox.south &&
+		loc.longitude <= bbox.east &&
+		loc.longitude <= bbox.west
+	)
+	const stopoverFilter = (st) => (
+		st.stop &&
+		st.stop.location &&
+		isWithinBbox(st.stop.location)
+	)
+	const events = {
+		'trip': t => t.stopovers.some(stopoverFilter),
+		'new-trip': (_, m) => (
+			isWithinBbox(m.location) ||
+			m.nextStopovers.some(stopoverFilter)
+		),
+		'trip-obsolete': (_, t) => t => t.stopovers.some(stopoverFilter),
+		'stopover': stopoverFilter,
+		'position': isWithinBbox,
+		'error': err => true,
+		'stats': stats => true
+	}
+
 	const proxy = new EventEmitter()
-	const listeners = EVENTS.map((eventName) => [
+	const listeners = Object.entries(events).map(([eventName, filter]) => [
 		eventName,
-		(...args) => proxy.emit(eventName, ...args)
+		(...args) => {
+			if (filter(...args)) proxy.emit(eventName, ...args)
+		}
 	])
 
 	for (const [eventName, listener] of listeners) {
@@ -76,7 +95,7 @@ const createServer = (hafas) => {
 			index.remove(entry)
 			nrOfMonitors--
 		}
-		return monitorProxy(entry.monitor, removeMonitor)
+		return monitorProxy(entry.monitor, bbox, removeMonitor)
 	}
 
 	return {
