@@ -20,6 +20,9 @@
 		"node": ">=8"
 	},
 	"dependencies": {
+		"debug": "^4.1.1",
+		"hafas-monitor-trips": "^2.0.0",
+		"rbush": "^3.0.0"
 	},
 	"devDependencies": {
 		"tap-min": "^2.0.0",
