@@ -100,7 +100,8 @@ const createServer = (hafas) => {
 
 	return {
 		subscribe,
-		nrOfMonitors: () => nrOfMonitors
+		nrOfMonitors: () => nrOfMonitors,
+		index
 	}
 }
 
