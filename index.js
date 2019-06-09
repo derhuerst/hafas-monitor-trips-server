@@ -18,7 +18,7 @@ const monitorProxy = (monitor, bbox, destroyMonitor) => {
 		st.stop.location &&
 		isWithinBbox(st.stop.location)
 	)
-	const events = {
+	const events = Object.assign(Object.create(null), {
 		'trip': t => t.stopovers.some(stopoverFilter),
 		'new-trip': (_, m) => (
 			isWithinBbox(m.location) ||
@@ -29,19 +29,32 @@ const monitorProxy = (monitor, bbox, destroyMonitor) => {
 		'position': isWithinBbox,
 		'error': err => true,
 		'stats': stats => true
-	}
+	})
 
+	const listeners = []
 	const proxy = new EventEmitter()
-	const listeners = Object.entries(events).map(([eventName, filter]) => [
-		eventName,
-		(...args) => {
+
+	proxy.on('newListener', (eventName) => {
+		if (!(eventName in events)) return;
+		if (listeners.find(evName => evName === eventName)) return;
+		debug('proxy', 'adding listener for', eventName)
+
+		const filter = events[eventName]
+		const listener = (...args) => {
 			if (filter(...args)) proxy.emit(eventName, ...args)
 		}
-	])
-
-	for (const [eventName, listener] of listeners) {
 		monitor.on(eventName, listener)
-	}
+		listeners.push([eventName, listener])
+	})
+	proxy.on('removeListener', (eventName) => {
+		if (!(eventName in events)) return;
+		const i = listeners.findIndex(evName => evName === eventName)
+		if (i < 0) return;
+		debug('proxy', 'removing listener for', eventName)
+
+		monitor.removeListener(eventName, listener)
+		listeners.splice(i, 1)
+	})
 
 	if (!(refCount in monitor)) monitor[refCount] = 1
 	else monitor[refCount]++
@@ -49,6 +62,7 @@ const monitorProxy = (monitor, bbox, destroyMonitor) => {
 	proxy.destroy = () => {
 		if (!monitor) return;
 
+		debug('proxy', 'removing all listeners')
 		for (const [eventName, listener] of listeners) {
 			monitor.removeListener(eventName, listener)
 		}
