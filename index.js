@@ -2,7 +2,7 @@
 
 const {EventEmitter} = require('events')
 const RBush = require('rbush')
-const createMonitor = require('hafas-monitor-trips')
+const _createMonitor = require('hafas-monitor-trips')
 const debug = require('debug')('hafas-monitor-trips-server')
 
 const refCount = Symbol('ref count')
@@ -75,7 +75,13 @@ const monitorProxy = (monitor, bbox, destroyMonitor) => {
 	return proxy
 }
 
-const createServer = (hafas) => {
+const defaults = {
+	createMonitor: _createMonitor
+}
+
+const createServer = (hafas, opt = {}) => {
+	const {createMonitor} = {...defaults, ...opt}
+
 	const index = new RBush()
 	let nrOfMonitors = 0
 

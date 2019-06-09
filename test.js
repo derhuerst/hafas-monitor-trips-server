@@ -26,3 +26,5 @@ test('overlapping bounding boxes share an event emitter', (t) => {
 	subA.destroy()
 	subB.destroy()
 })
+
+// todo
